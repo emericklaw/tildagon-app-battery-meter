@@ -90,7 +90,10 @@ class BatteryMeter(app.App):
         Vsys = power.Vsys()
         Vin = power.Vin()
 
-        clear_background(ctx)
+        if BatteryLevel > 100:
+            BatteryLevel = 100
+        elif BatteryLevel < 0:
+            BatteryLevel = 0
 
         self.menu.draw(ctx)
 
