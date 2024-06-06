@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - 'tildagon.toml'
-      - '.github/workflows/release.yml'
     tags-ignore:
       - '*'
       
