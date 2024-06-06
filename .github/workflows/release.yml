@@ -2,7 +2,11 @@ name: Create Release
 
 on:
   push:
-
+    paths:
+      - 'tildagon.toml'
+      - '.github/workflows/release.yml'
+    tags-ignore:
+      - '*'
       
 jobs:
   build:
@@ -53,8 +57,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         with:
-          tag_name: ${VERSION}
-          release_name: ${VERSION}
+          tag_name: ${{VERSION}}
+          release_name: ${{VERSION}}
           body: |
             Changes since ${{ steps.changes.outputs.last-tag }}:
             ${{ steps.changes.outputs.log }}
