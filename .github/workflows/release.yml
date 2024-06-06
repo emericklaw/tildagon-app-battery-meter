@@ -68,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         with:
           tag_name: v${{ steps.get_version_2.outputs.version }}
-          release_name: v${{ steps.get_version.outputs.version }}
+          release_name: v${{ steps.get_version_2.outputs.version }}
           body: |
             Changes since ${{ steps.changes.outputs.last-tag }}:
             ${{ steps.changes.outputs.log }}
