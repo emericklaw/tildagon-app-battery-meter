@@ -5,8 +5,8 @@ on:
     paths:
       - 'tildagon.toml'
       - '.github/workflows/release.yml'
-    # tags-ignore:
-    #   - '*'
+    tags-ignore:
+      - '*'
       
 jobs:
   build:
@@ -50,15 +50,20 @@ jobs:
         id: print_version
         run: |
           printf 'Version: %s\n' "$VERSION"
-          
+
+      - name: Get version 2
+        id: get_version_2
+        run: |
+          echo ::set-output name=version::$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_version.outputs.VERSION }}
-          release_name: ${{ steps.get_version.outputs.VERSION }}
+          tag_name: v${{ steps.get_version_2.outputs.version }}
+          release_name: v${{ steps.get_version.outputs.version }}
           body: |
             Changes since ${{ steps.changes.outputs.last-tag }}:
             ${{ steps.changes.outputs.log }}
