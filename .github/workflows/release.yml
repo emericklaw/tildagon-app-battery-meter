@@ -39,7 +39,7 @@ jobs:
         run: |
             {
               echo 'VERSION<<EOF'
-              $(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+              echo $(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
               echo EOF
             } >> "$GITHUB_ENV"
 
