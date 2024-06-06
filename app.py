@@ -107,7 +107,7 @@ class BatteryMeter(app.App):
         batteryH = 120
         batteryW = 60
         batteryX = (batteryW / 2) * -1
-        batteryY = 25
+        batteryY = 20
 
         clear_background(ctx)
         ctx.rgb(0, 0, 0)
@@ -129,14 +129,14 @@ class BatteryMeter(app.App):
             batteryW - 6,
             -(BatteryLevel / 100 * (batteryH - 6)),
         ).fill()
-        ctx.rgb(r, g, b).move_to(0, 40).text("{:.1f}".format(BatteryLevel) + "%")
+        ctx.rgb(r, g, b).move_to(0, 35).text("{:.1f}".format(BatteryLevel) + "%")
 
         ctx.rgb(255, 255, 255)
-        ctx.move_to(1, 71).text(BatteryChargeState)
-        ctx.move_to(0, 70).text(BatteryChargeState)
+        ctx.move_to(1, 63).text(BatteryChargeState)
+        ctx.move_to(0, 62).text(BatteryChargeState)
         if BatteryChargeState != "Not Charging":
-            ctx.move_to(0, 90).text("{:.0f}".format(Icharge * 1000) + "ma")
-            ctx.move_to(0, 110).text("{:.2f}".format(Vin) + "V")
+            ctx.move_to(0, 85).text("{:.0f}".format(Icharge * 1000) + "ma")
+            ctx.move_to(0, 105).text("{:.2f}".format(Vin) + "V")
 
         # ctx.rgb(255, 0, 0).move_to(0, -50).text(
         #     SupplyCapabilities[0]
