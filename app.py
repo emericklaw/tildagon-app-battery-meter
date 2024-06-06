@@ -19,6 +19,9 @@ class BatteryMeter(app.App):
         # Notification setup
         self.notification = None
 
+        # App setup
+        self.chargingCounter = 0
+
     def back_handler(self):
         # If in the topmost menu, minimize, otherwise move one menu up.
         if self.current_menu == "main":
@@ -129,7 +132,29 @@ class BatteryMeter(app.App):
             batteryW - 6,
             -(BatteryLevel / 100 * (batteryH - 6)),
         ).fill()
+
         ctx.rgb(r, g, b).move_to(0, 35).text("{:.1f}".format(BatteryLevel) + "%")
+
+        # Charging animation
+        if BatteryChargeState == "Fast Charging":
+            self.chargingCounter = self.chargingCounter + 2.5
+            ChargingBatteryLevel = BatteryLevel + self.chargingCounter
+            if ChargingBatteryLevel > 100:
+                ChargingBatteryLevel = 100
+            r2, g2, b2 = get_color(ChargingBatteryLevel)
+            ctx.rgb(r2, g2, b2).rectangle(
+                batteryX + 3,
+                batteryY - 3 - (BatteryLevel / 100 * (batteryH - 6)) - 1,
+                batteryW - 6,
+                -(ChargingBatteryLevel / 100 * (batteryH - 6))
+                + (BatteryLevel / 100 * (batteryH - 6))
+                + 2,
+            ).fill()
+
+            if ChargingBatteryLevel >= 100:
+                self.chargingCounter = 0
+        else:
+            self.chargingCounter = 0
 
         ctx.rgb(255, 255, 255)
         ctx.move_to(1, 63).text(BatteryChargeState)
