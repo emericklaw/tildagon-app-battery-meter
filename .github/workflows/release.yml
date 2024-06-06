@@ -5,8 +5,8 @@ on:
     paths:
       - 'tildagon.toml'
       - '.github/workflows/release.yml'
-    tags-ignore:
-      - '*'
+    # tags-ignore:
+    #   - '*'
       
 jobs:
   build:
