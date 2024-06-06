@@ -95,6 +95,10 @@ class BatteryMeter(app.App):
         elif BatteryLevel < 0:
             BatteryLevel = 0
 
+        if BatteryChargeState == "Terminated":
+            BatteryChargeState = "Finished Charging"
+
+        clear_background(ctx)
         self.menu.draw(ctx)
 
         if self.notification:
