@@ -26,13 +26,31 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-            echo VERSION=$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])") >> $GITHUB_VERSION
+            {
+              echo 'VERSION<<EOF'
+              $(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+              echo EOF
+            } >> "$GITHUB_VERSION"
 
-      - name: Get commits
-        id: get_commits
+      - name: Print version
+        id: print_version
         run: |
-          echo CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s") >> $GITHUB_CHANGES
+          printf 'Version: %s\n' "$VERSION"
+          
+      - name: Get changes
+        id: get_changes
+        run: |
+            {
+              echo 'CHANGES<<EOF'
+              $(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
+              echo EOF
+            } >> "$GITHUB_CHANGES"
 
+      - name: Print changes
+        id: print_changes
+        run: |
+          printf 'Changes:\n%s\n' "$CHANGES"
+          
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -43,6 +61,6 @@ jobs:
           release_name: v${{ steps.get_version.outputs.VERSION }}
           body: |
             Changes:
-            ${{ steps.get_commits.outputs.CHANGES }}
+            ${{ steps.get_changes.outputs.CHANGES }}
           draft: false
           prerelease: false
