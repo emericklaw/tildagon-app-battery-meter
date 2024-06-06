@@ -1,0 +1,47 @@
+name: Create Release
+
+on:
+  push:
+    paths:
+      - 'tildagon.toml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install toml
+
+      - name: Get version
+        id: get_version
+        run: |
+          echo ::set-output name=version::$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+
+      - name: Get commits
+        id: get_commits
+        run: |
+          echo ::set-output name=commits::$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: Release ${{ steps.get_version.outputs.version }}
+          body: |
+            Changes:
+            ${{ steps.get_commits.outputs.commits }}
+          draft: false
+          prerelease: false
