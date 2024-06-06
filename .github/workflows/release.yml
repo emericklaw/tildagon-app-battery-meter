@@ -25,12 +25,12 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-          echo ::set-output name=version::$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+            echo "version=$(python -c \"import toml; print(toml.load('tildagon.toml')['metadata']['version'])\")" >> $GITHUB_VERSION
 
       - name: Get commits
         id: get_commits
         run: |
-          echo ::set-output name=commits::$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
+          echo "commits=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:\"- %s\")" >> $GITHUB_CHANGES
 
       - name: Create Release
         id: create_release
@@ -38,10 +38,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: Release ${{ steps.get_version.outputs.version }}
+          tag_name: v$GITHUB_VERSION
+          release_name: v$GITHUB_VERSION
           body: |
             Changes:
-            ${{ steps.get_commits.outputs.commits }}
+            $GITHUB_CHANGES
           draft: false
           prerelease: false
