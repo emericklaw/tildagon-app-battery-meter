@@ -5,7 +5,9 @@ on:
     paths:
       - 'tildagon.toml'
       - '.github/workflows/release.yml'
-
+    tags-ignore:
+      - '*'
+      
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,7 +41,8 @@ jobs:
         run: |
             {
               echo 'VERSION<<EOF'
-              echo v$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+              echo "v"
+              echo $(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
               echo EOF
             } >> "$GITHUB_ENV"
 
