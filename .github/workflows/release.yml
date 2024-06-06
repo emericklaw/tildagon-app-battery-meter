@@ -39,7 +39,7 @@ jobs:
         run: |
             {
               echo 'VERSION<<EOF'
-              echo $(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+              echo v$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
               echo EOF
             } >> "$GITHUB_ENV"
 
@@ -54,8 +54,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         with:
-          tag_name: v$VERSION
-          release_name: v$VERSION
+          tag_name: $VERSION
+          release_name: $VERSION
           body: |
             Changes since ${{ steps.changes.outputs.last-tag }}:
             ${{ steps.changes.outputs.log }}
