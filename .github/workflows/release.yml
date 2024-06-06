@@ -23,19 +23,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install toml
 
-      - name: Get version
-        id: get_version
-        run: |
-            {
-              echo 'VERSION<<EOF'
-              $(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
-              echo EOF
-            } >> "$GITHUB_VERSION"
+      # - name: Get version
+      #   id: get_version
+      #   run: |
+      #       {
+      #         echo 'VERSION<<EOF'
+      #         $(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
+      #         echo EOF
+      #       } >> "$GITHUB_ENV"
 
-      - name: Print version
-        id: print_version
-        run: |
-          printf 'Version: %s\n' "$VERSION"
+      # - name: Print version
+      #   id: print_version
+      #   run: |
+      #     printf 'Version: %s\n' "$VERSION"
           
       - name: Get changes
         id: get_changes
@@ -44,7 +44,7 @@ jobs:
               echo 'CHANGES<<EOF'
               $(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s")
               echo EOF
-            } >> "$GITHUB_CHANGES"
+            } >> "$GITHUB_ENV"
 
       - name: Print changes
         id: print_changes
