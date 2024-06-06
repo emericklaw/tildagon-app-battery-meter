@@ -55,7 +55,12 @@ jobs:
         id: get_version_2
         run: |
           echo ::set-output name=version::$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])")
-
+      
+      - name: Print version 2
+        id: print_version_2
+        run: |
+          printf 'Version: %s\n' "${{ steps.get_version_2.outputs.version }}"
+          
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
