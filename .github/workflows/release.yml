@@ -2,11 +2,10 @@ name: Create Release
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'tildagon.toml'
-      - '.github/workflows/release.yml'
-    # tags-ignore:
-    #   - 'v*'
       
 jobs:
   build:
