@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'tildagon.toml'
+      - '.github/workflows/release.yml'
 
 jobs:
   build:
@@ -25,12 +26,12 @@ jobs:
       - name: Get version
         id: get_version
         run: |
-            echo "VERSION=$(python -c \"import toml; print(toml.load('tildagon.toml')['metadata']['version'])\")" >> $GITHUB_VERSION
+            echo VERSION=$(python -c "import toml; print(toml.load('tildagon.toml')['metadata']['version'])") >> $GITHUB_VERSION
 
       - name: Get commits
         id: get_commits
         run: |
-          echo "CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:\"- %s\")" >> $GITHUB_CHANGES
+          echo CHANGES=$(git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"- %s") >> $GITHUB_CHANGES
 
       - name: Create Release
         id: create_release
