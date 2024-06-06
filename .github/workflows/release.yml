@@ -12,7 +12,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Get Commits since last Release
+        id: changes
+        uses: simbo/changes-since-last-release-action@v1
+
+      - name: Output collected Data
+        run: |
+          echo "Changes since ${{ steps.changes.outputs.last-tag }}:"
+          echo "${{ steps.changes.outputs.log }}"
+          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -57,10 +68,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.get_version.outputs.VERSION }}
-          release_name: v${{ steps.get_version.outputs.VERSION }}
+          tag_name: v$VERSION
+          release_name: v$VERSION
           body: |
-            Changes:
-            ${{ steps.get_changes.outputs.CHANGES }}
+            Changes since ${{ steps.changes.outputs.last-tag }}:
+            ${{ steps.changes.outputs.log }}
           draft: false
           prerelease: false
