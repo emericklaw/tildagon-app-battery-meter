@@ -1,20 +1,15 @@
 import app
 from app_components import Menu, Notification, clear_background
 import power
-
-main_menu_items = [
-    "Power",
-]
-
-power_menu_items = ["On", "Off"]
+from events.input import Button, BUTTON_TYPES, ButtonDownEvent, ButtonUpEvent
+from system.eventbus import eventbus
+from system.scheduler.events import RequestForegroundPushEvent
 
 
 class BatteryMeter(app.App):
     def __init__(self):
-        # Menu setup
-        self.menu = None
-        self.current_menu = None
-        self.set_menu("main")
+
+        self.app = app
 
         # Notification setup
         self.notification = None
@@ -22,164 +17,174 @@ class BatteryMeter(app.App):
         # App setup
         self.chargingCounter = 0
 
-    def back_handler(self):
-        # If in the topmost menu, minimize, otherwise move one menu up.
-        if self.current_menu == "main":
-            self.minimise()
-        else:
-            self.set_menu("main")
+        # Button setup
+        eventbus.on(ButtonDownEvent, self._handle_buttondown, self)
 
-    def select_handler(self, item, idx):
-        # If Power or Preset item selected enter that menu
-        if item in main_menu_items:
-            self.set_menu(item)
-        else:
-            if self.current_menu == "Power":
-                if item == "On":
-                    self.notification = Notification("Power On")
-                    self.power = True
-                    self.eye.value(0)
-                    self.set_menu("main")
-                elif item == "Off":
-                    self.notification = Notification("Power Off")
-                    self.power = False
-                    self.dot1.value(1)
-                    self.dot2.value(1)
-                    self.dot3.value(1)
-                    self.eye.value(1)
-                    self.set_menu("main")
-            else:
-                self.notification = Notification(self.current_menu + "." + item + '"!')
+        eventbus.on(
+            RequestForegroundPushEvent, self._handle_request_foreground_push, self
+        )
 
-    def set_menu(
-        self,
-        menu_name: Literal[
-            "main",
-            "Power",
-        ],
-    ):
-        if self.menu:
-            self.menu._cleanup()
-        if self.current_menu:
-            previous_menu = self.current_menu
-        else:
-            previous_menu = "Power"
-        self.current_menu = menu_name
-        if menu_name == "main":
-            self.menu = Menu(
-                self,
-                main_menu_items,
-                select_handler=self.select_handler,
-                back_handler=self.back_handler,
-                position=(main_menu_items).index(previous_menu),
-            )
-        elif menu_name == "Power":
-            self.menu = Menu(
-                self,
-                power_menu_items,
-                select_handler=self.select_handler,
-                back_handler=self.back_handler,
-                position=0 if self.power else 1,
-            )
+        # Page setup
+        self.page = "main"
+
+        # Constants for battery dimensions
+        self.BATTERY_HEIGHT = 120
+        self.BATTERY_WIDTH = 60
+        self.BATTERY_X = (self.BATTERY_WIDTH / 2) * -1
+        self.BATTERY_Y = 20
+
+    def _handle_request_foreground_push(self, event: RequestForegroundPushEvent):
+        eventbus.on(ButtonDownEvent, self._handle_buttondown, self)
+
+    def _cleanup(self):
+        eventbus.remove(ButtonDownEvent, self._handle_buttondown, self.app)
 
     def draw(self, ctx):
-
-        BatteryChargeState = power.BatteryChargeState()
-        BatteryLevel = power.BatteryLevel()
-        Vbat = power.Vbat()
-        Fault = power.Fault()
-        SupplyCapabilities = power.SupplyCapabilities()[0]
-        Icharge = power.Icharge()
-        Vsys = power.Vsys()
-        Vin = power.Vin()
-
-        if BatteryLevel > 100:
-            BatteryLevel = 100
-        elif BatteryLevel < 0:
-            BatteryLevel = 0
-
-        if BatteryChargeState == "Terminated":
-            BatteryChargeState = "Finished Charging"
-
-        clear_background(ctx)
-        self.menu.draw(ctx)
 
         if self.notification:
             self.notification.draw(ctx)
 
-        batteryH = 120
-        batteryW = 60
-        batteryX = (batteryW / 2) * -1
-        batteryY = 20
-
         clear_background(ctx)
-        ctx.rgb(0, 0, 0)
-        ctx.rectangle(-120, -120, 240, 240).fill()
 
-        ctx.rgb(255, 255, 255)
-        ctx.rectangle(-11, batteryY - batteryH - 11, 22, 12).fill()
-        ctx.rectangle(
-            batteryX - 1, batteryY + 1, batteryW + 2, (batteryH + 2) * -1
-        ).fill()
-        ctx.rgb(0, 0, 0)
-        ctx.rectangle(-10, batteryY - batteryH - 10, 20, 10).fill()
-        ctx.rectangle(batteryX, batteryY, batteryW, -batteryH).fill()
+        if self.page == "main":
+            BatteryChargeState = power.BatteryChargeState()
+            BatteryLevel = max(0, min(100, power.BatteryLevel()))  # Clamp to [0, 100]
+            Vbat, Icharge, Vsys, Vin = (
+                power.Vbat(),
+                power.Icharge(),
+                power.Vsys(),
+                power.Vin(),
+            )
 
-        r, g, b = get_color(BatteryLevel)
-        ctx.rgb(r, g, b).rectangle(
-            batteryX + 3,
-            batteryY - 3,
-            batteryW - 6,
-            -(BatteryLevel / 100 * (batteryH - 6)),
-        ).fill()
+            BatteryChargeState = (
+                "Finished Charging"
+                if BatteryChargeState == "Terminated"
+                else BatteryChargeState
+            )
 
-        ctx.rgb(r, g, b).move_to(0, 35).text("{:.1f}".format(BatteryLevel) + "%")
+            ctx.font_size = 22
+            ctx.text_align = ctx.CENTER
+            ctx.rgb(0, 0, 0)
+            ctx.rectangle(-120, -120, 240, 240).fill()
 
-        # Charging animation
-        if BatteryChargeState == "Fast Charging":
-            self.chargingCounter = self.chargingCounter + 2.5
-            ChargingBatteryLevel = BatteryLevel + self.chargingCounter
-            if ChargingBatteryLevel > 100:
-                ChargingBatteryLevel = 100
-            r2, g2, b2 = get_color(ChargingBatteryLevel)
-            ctx.rgb(r2, g2, b2).rectangle(
-                batteryX + 3,
-                batteryY - 3 - (BatteryLevel / 100 * (batteryH - 6)) - 1,
-                batteryW - 6,
-                -(ChargingBatteryLevel / 100 * (batteryH - 6))
-                + (BatteryLevel / 100 * (batteryH - 6))
-                + 2,
+            # Draw battery outline
+            ctx.rgb(255, 255, 255)
+            ctx.rectangle(-11, self.BATTERY_Y - self.BATTERY_HEIGHT - 11, 22, 12).fill()
+            ctx.rectangle(
+                self.BATTERY_X - 1,
+                self.BATTERY_Y + 1,
+                self.BATTERY_WIDTH + 2,
+                (self.BATTERY_HEIGHT + 2) * -1,
+            ).fill()
+            ctx.rgb(0, 0, 0)
+            ctx.rectangle(-10, self.BATTERY_Y - self.BATTERY_HEIGHT - 10, 20, 10).fill()
+            ctx.rectangle(
+                self.BATTERY_X, self.BATTERY_Y, self.BATTERY_WIDTH, -self.BATTERY_HEIGHT
             ).fill()
 
-            if ChargingBatteryLevel >= 100:
+            # Draw battery level
+            r, g, b = get_color(BatteryLevel)
+            ctx.rgb(r, g, b).rectangle(
+                self.BATTERY_X + 3,
+                self.BATTERY_Y - 3,
+                self.BATTERY_WIDTH - 6,
+                -(BatteryLevel / 100 * (self.BATTERY_HEIGHT - 6)),
+            ).fill()
+
+            ctx.rgb(r, g, b).move_to(0, 38).text("{:.1f}".format(BatteryLevel) + "%")
+
+            # Charging animation
+            if BatteryChargeState == "Fast Charging":
+                self.chargingCounter += Icharge * 10 / 3
+                ChargingBatteryLevel = min(100, BatteryLevel + self.chargingCounter)
+                r2, g2, b2 = get_color(ChargingBatteryLevel)
+                ctx.rgb(r2, g2, b2).rectangle(
+                    self.BATTERY_X + 3,
+                    self.BATTERY_Y
+                    - 3
+                    - (BatteryLevel / 100 * (self.BATTERY_HEIGHT - 6))
+                    - 1,
+                    self.BATTERY_WIDTH - 6,
+                    -(ChargingBatteryLevel / 100 * (self.BATTERY_HEIGHT - 6))
+                    + (BatteryLevel / 100 * (self.BATTERY_HEIGHT - 6))
+                    + 2,
+                ).fill()
+
+                if ChargingBatteryLevel >= 100:
+                    self.chargingCounter = 0
+            else:
                 self.chargingCounter = 0
-        else:
-            self.chargingCounter = 0
 
-        ctx.rgb(255, 255, 255)
-        ctx.move_to(1, 63).text(BatteryChargeState)
-        ctx.move_to(0, 62).text(BatteryChargeState)
-        if BatteryChargeState != "Not Charging":
-            ctx.move_to(0, 85).text("{:.0f}".format(Icharge * 1000) + "ma")
-            ctx.move_to(0, 105).text("{:.2f}".format(Vin) + "V")
+            # Display battery info
+            ctx.rgb(255, 255, 255)
+            ctx.move_to(0, 63).text(BatteryChargeState)
+            if BatteryChargeState != "Not Charging":
+                ctx.move_to(0, 85).text(f"{Icharge * 1000:.0f}ma")
+                ctx.move_to(0, 105).text(f"{Vin:.2f}V")
 
-        # ctx.rgb(255, 0, 0).move_to(0, -50).text(
-        #     SupplyCapabilities[0]
-        #     + " "
-        #     + "{:.2f}".format(SupplyCapabilities[1])
-        #     + " "
-        #     + "{:.2f}".format(SupplyCapabilities[2])
-        # )
-        ctx.rgb(255, 255, 255).move_to(-69, -24).text("Bat")
-        ctx.rgb(255, 255, 255).move_to(-70, -25).text("Bat")
-        ctx.move_to(-70, 0).text("{:.2f}".format(Vbat) + "V")
+            # Display voltage info
+            ctx.rgb(255, 255, 255).move_to(-69, -24).text("Bat")
+            ctx.rgb(255, 255, 255).move_to(-70, -25).text("Bat")
+            ctx.move_to(-70, 0).text(f"{Vbat:.2f}V")
 
-        ctx.rgb(255, 255, 255).move_to(71, -24).text("Sys")
-        ctx.rgb(255, 255, 255).move_to(70, -25).text("Sys")
-        ctx.move_to(70, 0).text("{:.2f}".format(Vsys) + "V")
+            ctx.rgb(255, 255, 255).move_to(71, -24).text("Sys")
+            ctx.rgb(255, 255, 255).move_to(70, -25).text("Sys")
+            ctx.move_to(70, 0).text(f"{Vsys:.2f}V")
+
+        elif self.page == "info":
+
+            ctx.text_align = ctx.CENTER
+            ctx.rgb(0, 0, 0)
+            ctx.rectangle(-120, -120, 240, 240).fill()
+
+            ctx.rgb(255, 255, 255)
+            ctx.font_size = 35
+            ctx.rgb(255, 255, 255).move_to(0, -90).text("Info")
+
+            # Charger
+            SupplyCapabilities = power.SupplyCapabilities()[0]
+
+            ctx.font_size = 26
+            ctx.move_to(0, -60).text("Charger")
+            if SupplyCapabilities[0] != "disconnected":
+                ctx.font_size = 22
+                ctx.move_to(0, -40).text("Capabilities: " + str(SupplyCapabilities[0]))
+                ctx.move_to(0, -20).text(
+                    "Current: {:.0f}".format(SupplyCapabilities[1]) + "ma"
+                )
+                ctx.move_to(0, 0).text(
+                    "Voltage: {:.2f}".format(SupplyCapabilities[2]) + "V"
+                )
+            else:
+                ctx.font_size = 22
+                ctx.move_to(0, -40).text("Disconnected")
+
+            # Status
+            Fault = power.Fault()
+
+            ctx.font_size = 26
+            ctx.move_to(0, 35).text("Status")
+
+            ctx.font_size = 22
+            currentY = 55
+            for key, value in Fault.items():
+                ctx.move_to(0, currentY).text(key + ": " + str(value))
+                currentY += 20
+
+    def _handle_buttondown(self, event: ButtonDownEvent):
+        if BUTTON_TYPES["CANCEL"] in event.button:
+            if self.page == "main":
+                self._cleanup()
+                self.minimise()
+            else:
+                self.page = "main"
+
+        if BUTTON_TYPES["CONFIRM"] in event.button:
+            if self.page == "main":
+                self.page = "info"
 
     def update(self, delta):
-        self.menu.update(delta)
+
         if self.notification:
             self.notification.update(delta)
 
