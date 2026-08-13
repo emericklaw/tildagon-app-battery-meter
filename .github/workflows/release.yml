@@ -30,6 +30,74 @@ jobs:
           python -m pip install --upgrade pip
           pip install toml
 
+      - name: Reconcile app.py/tildagon.toml version drift
+        id: reconcile
+        run: |
+          python - <<'PYEOF'
+          import re
+
+          def parse_version(v):
+              parts = v.split(".")
+              nums = tuple(int(p) for p in parts)
+              return nums + (0,) * (3 - len(nums))
+
+          def read(path):
+              with open(path) as f:
+                  return f.read()
+
+          def write(path, content):
+              with open(path, "w") as f:
+                  f.write(content)
+
+          toml_src = read("tildagon.toml")
+          toml_match = re.search(r'(?m)^version\s*=\s*"([^"]+)"', toml_src)
+          toml_version = toml_match.group(1)
+
+          try:
+              app_src = read("app.py")
+          except FileNotFoundError:
+              app_src = ""
+
+          app_match = re.search(r'(?m)^APP_VERSION\s*=\s*"([^"]+)"', app_src)
+
+          changed = False
+
+          if app_match:
+              app_version = app_match.group(1)
+              if parse_version(app_version) < parse_version(toml_version):
+                  new_app_src = (
+                      app_src[: app_match.start(1)] + toml_version + app_src[app_match.end(1):]
+                  )
+                  write("app.py", new_app_src)
+                  changed = True
+                  print("app.py APP_VERSION {} -> {}".format(app_version, toml_version))
+              elif parse_version(toml_version) < parse_version(app_version):
+                  new_toml_src = (
+                      toml_src[: toml_match.start(1)] + app_version + toml_src[toml_match.end(1):]
+                  )
+                  write("tildagon.toml", new_toml_src)
+                  changed = True
+                  print("tildagon.toml version {} -> {}".format(toml_version, app_version))
+              else:
+                  print("app.py and tildagon.toml versions already match ({})".format(toml_version))
+          else:
+              print("No APP_VERSION constant in app.py -- skipping version reconciliation.")
+
+          with open("_reconcile_changed", "w") as f:
+              f.write("true" if changed else "false")
+          PYEOF
+          echo "changed=$(cat _reconcile_changed)" >> "$GITHUB_OUTPUT"
+          rm -f _reconcile_changed
+
+      - name: Commit version reconciliation
+        if: steps.reconcile.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.py tildagon.toml
+          git commit -m "Reconcile app.py/tildagon.toml version"
+          git push
+
       - name: Get version from tildagon.toml
         id: version
         run: |
