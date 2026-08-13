@@ -52,7 +52,19 @@ jobs:
       - name: Get commits since last release
         if: steps.check.outputs.exists == 'false'
         id: changes
-        uses: simbo/changes-since-last-release-action@v1
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:'- %s (%h)')
+          else
+            LOG=$(git log --pretty=format:'- %s (%h)')
+          fi
+          {
+            echo "last-tag=$LAST_TAG"
+            echo "log<<GHOUTPUTEOF"
+            echo "$LOG"
+            echo "GHOUTPUTEOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Write release notes
         if: steps.check.outputs.exists == 'false'
